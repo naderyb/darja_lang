@@ -10,6 +10,9 @@ int main() {
     yyin = stdin;
     yyparse();
 
+    printf("\nAppuyez sur Entree pour quitter...");
+    getchar();  // wait for user to press Enter
+
     printf("Program finished!\n");
     return 0;
 }
