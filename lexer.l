@@ -8,7 +8,6 @@
 %%
 
 "abda"      { return ABDA; }
-"khlas"     { return KHLAS; }
 "akteb"     { return AKTEB; }
 "dir"       { return DIR; }
 "a9ra"      { return A9RA; }
