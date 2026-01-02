@@ -365,7 +365,6 @@ Some possible future features:
 
 - Functions (`dalla` / `reje3`) and user-defined procedures.
 - Arrays / lists.
-- A real `khlas` keyword as an official end-of-program token in the grammar.
 - More data types (booleans, strings with operations, etc.).
 
 ---
