@@ -3,6 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+extern int yylineno;
+extern int yycolumn;
+extern char *yytext;
+
 void yyerror(const char *s);
 int yylex(void);
 void set_var_value(const char *name, int value);  // forward declaration
@@ -376,6 +380,8 @@ void execute_program() {
     Expr* expr;
 }
 
+%define parse.error verbose
+
 /* add new control-flow tokens (already returned by lexer) */
 %token ABDA AKTEB DIR A9RA IDA WELA_IDA WELA MEDEM POUR MN A_TO
 %token NEWLINE
@@ -546,5 +552,12 @@ expr:
 %%
 
 void yyerror(const char *s) {
-    fprintf(stderr,"error: %s\n", s);
+    fprintf(stderr,
+            "Syntax error at line %d, column %d: %s\n",
+            yylineno, yycolumn, s);
+    if (yytext && *yytext != '\n') {
+        fprintf(stderr, "  Near token: '%s'\n", yytext);
+    }
+    fprintf(stderr,
+            "Hint: check for missing 'khlas', unmatched braces '{ }', or wrong operators.\n");
 }
