@@ -24,17 +24,18 @@ typedef struct Var {
 
 Var *var_list = NULL;
 
+/*new word: AST= abstract syntax tree*/
+
 // ----- AST for deferred execution -----
-// extend with IF and WHILE
 typedef enum { STMT_PRINT, STMT_VAR_DECL, STMT_IF, STMT_WHILE, STMT_FOR } StmtType;
 typedef enum { EXPR_NUM, EXPR_VAR, EXPR_BINOP, EXPR_READ, EXPR_LOGICAL } ExprType;
 
 // forward declarations for structs are now provided via %code requires
 struct Expr {
     ExprType type;
-    int ival;        // for numbers
-    char *name;      // for variables
-    int op;          // '+', '-', '*', '/', '%'
+    int ival; // for numbers
+    char *name; // for variables
+    int op; // '+', '-', '*', '/', '%'
     struct Expr *left;
     struct Expr *right;
 };
@@ -45,7 +46,7 @@ struct Stmt {
     union {
         struct { char *var_name; struct Expr *expr; } var_decl;
         struct { int is_string; char *str; struct Expr *expr; } print;
-        // new: if / while
+        // if / while
         struct { struct Expr *cond; struct Stmt *then_branch; struct Stmt *else_branch; } if_stmt;
         struct { struct Expr *cond; struct Stmt *body; } while_stmt;
         struct { struct Stmt *init; struct Expr *cond; struct Stmt *update; struct Stmt *body; } for_stmt;
@@ -69,6 +70,7 @@ static void add_statement(Stmt *s) {
     }
 }
 
+// builder for number expression
 static Expr *make_num_expr(int v) {
     Expr *e = malloc(sizeof(Expr));
     e->type = EXPR_NUM;
@@ -79,6 +81,7 @@ static Expr *make_num_expr(int v) {
     return e;
 }
 
+// builder for variable expression
 static Expr *make_var_expr(char *name) {
     Expr *e = malloc(sizeof(Expr));
     e->type = EXPR_VAR;
@@ -89,6 +92,7 @@ static Expr *make_var_expr(char *name) {
     return e;
 }
 
+// builder for binary operation expression 
 static Expr *make_binop_expr(int op, Expr *l, Expr *r) {
     Expr *e = malloc(sizeof(Expr));
     e->type = EXPR_BINOP;
@@ -100,6 +104,7 @@ static Expr *make_binop_expr(int op, Expr *l, Expr *r) {
     return e;
 }
 
+// builder for read expression
 static Expr *make_read_expr(void) {
     Expr *e = malloc(sizeof(Expr));
     e->type = EXPR_READ;
@@ -110,15 +115,17 @@ static Expr *make_read_expr(void) {
     return e;
 }
 
+// builder for variable declaration statement
 static Stmt *make_var_decl(char *name, Expr *expr) {
-    Stmt *s = malloc(sizeof(Stmt));
-    s->type = STMT_VAR_DECL;
-    s->next = NULL;
+    Stmt *s = malloc(sizeof(Stmt)); // allocate statement (LAAAAZM also balak tensa free apres execution)
+    s->type = STMT_VAR_DECL; // variable declaration type
+    s->next = NULL; // no next yet
     s->u.var_decl.var_name = name; // take ownership
-    s->u.var_decl.expr = expr;
-    return s;
+    s->u.var_decl.expr = expr; // expression for initial value
+    return s; // return the statement (hhhhh nssit hedi w ga3d fig t3 2days)
 }
 
+// hedi dertha to print expression statement
 static Stmt *make_print_expr_stmt(Expr *expr) {
     Stmt *s = malloc(sizeof(Stmt));
     s->type = STMT_PRINT;
@@ -129,17 +136,18 @@ static Stmt *make_print_expr_stmt(Expr *expr) {
     return s;
 }
 
+// hedi dertha to print string statement
 static Stmt *make_print_string_stmt(char *str) {
     Stmt *s = malloc(sizeof(Stmt));
-    s->type = STMT_PRINT;
-    s->next = NULL;
-    s->u.print.is_string = 1;
-    s->u.print.str = str;  // take ownership
-    s->u.print.expr = NULL;
-    return s;
+    s->type = STMT_PRINT; // print string
+    s->next = NULL; // no next yet
+    s->u.print.is_string = 1; // it's a string wooooooooooy(ana 7mar)
+    s->u.print.str = str; // take ownership
+    s->u.print.expr = NULL; // no expr
+    return s; // return the statement
 }
 
-// new: builders for if / while
+// builders for if / while
 static Stmt *make_if_stmt(Expr *cond, Stmt *then_branch, Stmt *else_branch) {
     Stmt *s = malloc(sizeof(Stmt));
     s->type = STMT_IF;
@@ -150,6 +158,7 @@ static Stmt *make_if_stmt(Expr *cond, Stmt *then_branch, Stmt *else_branch) {
     return s;
 }
 
+// builder for while statement
 static Stmt *make_while_stmt(Expr *cond, Stmt *body) {
     Stmt *s = malloc(sizeof(Stmt));
     s->type = STMT_WHILE;
@@ -159,6 +168,7 @@ static Stmt *make_while_stmt(Expr *cond, Stmt *body) {
     return s;
 }
 
+// builder for for statement
 static Stmt *make_for_stmt(Stmt *init, Expr *cond, Stmt *update, Stmt *body) {
     Stmt *s = malloc(sizeof(Stmt));
     s->type = STMT_FOR;
@@ -170,11 +180,11 @@ static Stmt *make_for_stmt(Stmt *init, Expr *cond, Stmt *update, Stmt *body) {
     return s;
 }
 
-// NEW: prototype for execute_program
+//prototype for execute_program
 void execute_program(void);
 
 static int eval_expr(Expr *e);
-/* NEW: free expression tree helper */
+/*free expression tree helper */
 static void free_expr(Expr *e);
 
 // Variable helpers
@@ -224,15 +234,15 @@ static int eval_expr(Expr *e) {
         case '/': return r != 0 ? l / r : 0;
         case '%': return r != 0 ? l % r : 0;
         /* logical / comparison operators */
-        case 'o': return l || r;          /* OR */
-        case 'a': return l && r;          /* AND */
-        case '!': return !r;              /* NOT (unary, uses right) */
-        case '=': return l == r;          /* == */
-        case 'n': return l != r;          /* != */
+        case 'o': return l || r; /* OR */
+        case 'a': return l && r; /* AND */
+        case '!': return !r; /* NOT (unary, uses right) */
+        case '=': return l == r;  /* == */
+        case 'n': return l != r;  /* != */
         case '<': return l <  r;
         case '>': return l >  r;
-        case 'l': return l <= r;          /* <= */
-        case 'g': return l >= r;          /* >= */
+        case 'l': return l <= r;  /* <= */
+        case 'g': return l >= r;  /* >= */
         default:  return 0;
         }
     }
@@ -246,7 +256,7 @@ static int eval_expr(Expr *e) {
     }
 }
 
-/* NEW: implementation of free_expr (was previously nested inside execute_program) */
+/* implementation of free_expr (was mn 9bl nested inside execute_program) */
 static void free_expr(Expr *e) {
     if (!e) return;
     if (e->type == EXPR_BINOP) {
@@ -302,6 +312,7 @@ static void exec_stmt_list(Stmt *s) {
     }
 }
 
+// helper to free statement list
 static void free_stmt_list(Stmt *s) {
     while (s) {
         Stmt *next = s->next;
@@ -342,8 +353,9 @@ static void free_stmt_list(Stmt *s) {
     }
 }
 
-// Execute all stored statements
+// execute all stored statements
 void execute_program() {
+    printf("\n");
     exec_stmt_list(program_head);
     free_stmt_list(program_head);
     program_head = program_tail = NULL;
