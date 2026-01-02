@@ -5,6 +5,7 @@
 
 void yyerror(const char *s);
 int yylex(void);
+void set_var_value(const char *name, int value);  // forward declaration
 
 // Linked list to store statements until 'khlas'
 typedef struct Node {
@@ -27,45 +28,32 @@ Var *var_list = NULL;
 typedef enum { STMT_PRINT, STMT_VAR_DECL } StmtType;
 typedef enum { EXPR_NUM, EXPR_VAR, EXPR_BINOP, EXPR_READ } ExprType;
 
-typedef struct Expr Expr;
-typedef struct Stmt Stmt;
-
+// forward declarations for structs are now provided via %code requires
 struct Expr {
     ExprType type;
     int ival;        // for numbers
     char *name;      // for variables
     int op;          // '+', '-', '*', '/', '%'
-    Expr *left;
-    Expr *right;
+    struct Expr *left;
+    struct Expr *right;
 };
 
 struct Stmt {
     StmtType type;
-    Stmt *next;
+    struct Stmt *next;
     union {
-        struct { char *var_name; Expr *expr; } var_decl;
-        struct { int is_string; char *str; Expr *expr; } print;
+        struct { char *var_name; struct Expr *expr; } var_decl;
+        struct { int is_string; char *str; struct Expr *expr; } print;
     } u;
 };
 
+typedef struct Expr Expr;
+typedef struct Stmt Stmt;
+
+/* NEW: global program list head/tail for AST statements */
 Stmt *program_head = NULL;
 Stmt *program_tail = NULL;
 
-// Old helper (no longer used, kept for compatibility)
-void add_print_node(char *s) {
-    Node *n = malloc(sizeof(Node));
-    n->str = s;
-    n->next = NULL;
-    if (!program_list) {
-        program_list = n;
-    } else {
-        Node *curr = program_list;
-        while (curr->next) curr = curr->next;
-        curr->next = n;
-    }
-}
-
-// AST helpers
 static void add_statement(Stmt *s) {
     if (!s) return;
     if (!program_head) {
@@ -146,7 +134,12 @@ static Stmt *make_print_string_stmt(char *str) {
     return s;
 }
 
+// NEW: prototype for execute_program
+void execute_program(void);
+
 static int eval_expr(Expr *e);
+/* NEW: free expression tree helper */
+static void free_expr(Expr *e);
 
 // Execute all stored statements (after 'khlas')
 void execute_program() {
@@ -172,25 +165,12 @@ void execute_program() {
         // free stmt + owned data
         if (tmp->type == STMT_VAR_DECL) {
             free(tmp->u.var_decl.var_name);
-            // free expr tree below
         } else if (tmp->type == STMT_PRINT) {
             if (tmp->u.print.is_string) {
                 free(tmp->u.print.str);
             }
         }
         // free expr trees
-        // simple recursive free
-        void free_expr(Expr *e) {
-            if (!e) return;
-            if (e->type == EXPR_BINOP) {
-                free_expr(e->left);
-                free_expr(e->right);
-            }
-            if (e->type == EXPR_VAR && e->name) {
-                free(e->name);
-            }
-            free(e);
-        }
         if (tmp->type == STMT_VAR_DECL) {
             free_expr(tmp->u.var_decl.expr);
         } else if (!tmp->u.print.is_string) {
@@ -258,7 +238,27 @@ static int eval_expr(Expr *e) {
         return 0;
     }
 }
+
+/* NEW: implementation of free_expr (was previously nested inside execute_program) */
+static void free_expr(Expr *e) {
+    if (!e) return;
+    if (e->type == EXPR_BINOP) {
+        free_expr(e->left);
+        free_expr(e->right);
+    }
+    if (e->type == EXPR_VAR && e->name) {
+        free(e->name);
+    }
+    free(e);
+}
+
 %}
+
+/* make Stmt / Expr visible in the generated header before %union */
+%code requires {
+    typedef struct Stmt Stmt;
+    typedef struct Expr Expr;
+}
 
 %union {
     char* str;
@@ -267,7 +267,7 @@ static int eval_expr(Expr *e) {
     Expr* expr;
 }
 
-%token ABDA KHLAS AKTEB DIR A9RA
+%token ABDA AKTEB DIR A9RA
 %token NEWLINE
 %token <str> STRING ID
 %token <ival> NUM
@@ -283,13 +283,16 @@ static int eval_expr(Expr *e) {
 
 %%
 
+/* Execute + accept when the program input ends (EOF), not on 'khlas' */
 program:
-      ABDA block end_program
-    | ABDA statements end_program
-;
-
-end_program:
-      KHLAS opt_newlines { execute_program(); }
+      ABDA block opt_newlines {
+          execute_program();
+          YYACCEPT;
+      }
+    | ABDA statements opt_newlines {
+          execute_program();
+          YYACCEPT;
+      }
 ;
 
 opt_newlines:
