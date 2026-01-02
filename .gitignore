@@ -1,0 +1,5 @@
+.vscode/
+*.exe
+*.tab.c
+*.tab.h
+*.yy.c
