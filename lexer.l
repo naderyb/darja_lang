@@ -3,6 +3,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+extern int yylineno;
+int yycolumn = 1;   /* current column */
+
+
+/* update column for every token */
+#define YY_USER_ACTION yycolumn += yyleng;
 %}
 
 %%
@@ -42,7 +49,11 @@
 \"[^\"]*\"    { yylval.str = strdup(yytext); return STRING; }
 
 [ \t]+        { /* ignore spaces */ }
-\n            { return NEWLINE; }
+\n            {
+                 yylineno++;
+                 yycolumn = 1;
+                 return NEWLINE;
+              }
 
 .             { return *yytext; }
 %%
